@@ -37,6 +37,6 @@ jobs:
         env:
           REPO: self
           BRANCH: public
-          FOLDER: front-end/build
+          FOLDER: build
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MESSAGE: "Publishing commit: {sha}\nDescription: {msg}"
