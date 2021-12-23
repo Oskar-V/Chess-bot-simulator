@@ -11,6 +11,11 @@
         <button @click="handleRestartClick">RESTART</button>
       </div>
 
+      <div>
+        <div>Delay in seconds</div>
+        <input v-model="delayInSeconds"/>
+      </div>
+
 
       <div class="player-containers">
         <div>
@@ -55,6 +60,7 @@ export default {
   components: {Piece},
   data() {
     return {
+      delayInSeconds: 1,
       blackPlayerEndpoint: "",
       whitePlayerEndpoint: "",
       blackHistory: [],
@@ -121,6 +127,7 @@ export default {
       this.message = "White move";
       this.blackHistory = [];
       this.whiteHistory = [];
+      this.allHistory = [];
     },
     isEvenRow(index) {
       if (index < 8)
@@ -158,7 +165,7 @@ export default {
       if (this.isPlaying) {
         setTimeout(() => {
           if (this.isPlaying) this.makeTurn();
-        }, 1000)
+        }, this.delayInSeconds * 1000)
       }
     }
   },
