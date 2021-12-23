@@ -165,7 +165,7 @@ export default {
       if (this.isPlaying) {
         setTimeout(() => {
           if (this.isPlaying) this.makeTurn();
-        }, this.delayInSeconds * 1000)
+        }, Number(this.delayInSeconds) * 1000)
       }
     }
   },
