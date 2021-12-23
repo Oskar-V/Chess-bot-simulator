@@ -17,14 +17,17 @@
 
       <div style="display: flex; gap: 1em;">
         <div>
-          <div>Delay in ms: {{delayInMs}}</div>
-          <div class="slidecontainer">
-            <input v-model="delayInMs" type="range" min="0" max="5000" value="1000" class="slider">
-          </div>
+          <div>Delay in ms</div>
+            <input v-model="delayInMs" type="number" min="0" max="5000">
         </div>
         <div>
           <div>Games to be played</div>
-          <input v-model="gamesToBePlayed" type="number" min="1" max="100000"></div>
+          <input v-model="gamesToBePlayed" type="number" min="1" max="100000">
+        </div>
+        <div>
+          <div>Move limit per player</div>
+          <input v-model="moveLimitPerPlayer" type="number" min="1" max="100000">
+        </div>
       </div>
 
 
@@ -83,7 +86,9 @@ export default {
       whiteWins: 0,
       blackWins: 0,
       gamesToBePlayed: 1,
-      gameCounter: 0
+      gameCounter: 0,
+      moveLimitPerPlayer: 100,
+      moveTriggerer:false
     }
   },
 
@@ -109,9 +114,10 @@ export default {
               this.allHistory.push(response.data);
             }
 
-            if (this.chess.game_over()) {
+            const moveLimitExceeded = Number(this.moveLimitPerPlayer) <= this.allHistory.length / 2 ;
+            if (this.chess.game_over() || moveLimitExceeded){
               this.gameCounter++;
-              if (this.chess.in_draw() || this.chess.in_stalemate()){
+              if (this.chess.in_draw() || this.chess.in_stalemate() || moveLimitExceeded){
                 this.blackWins += 0.5;
                 this.whiteWins += 0.5;
               }else{
@@ -124,6 +130,8 @@ export default {
                 this.handleRestartClick(false);
                 this.handlePlayClick();
               }
+            }else{
+              this.moveTriggerer = !this.moveTriggerer;
             }
           }).catch(
           error => console.log(error)
@@ -189,7 +197,7 @@ export default {
   },
 
   watch: {
-    currentPlayer() {
+    moveTriggerer() {
       if (this.isPlaying ) {
         setTimeout(() => {
           if (this.isPlaying ) this.makeTurn();
