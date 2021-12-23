@@ -2,31 +2,41 @@
   <div class="container">
 
     <div class="controls-container">
-      <div>{{ message }}</div>
-
-      <div style="display: flex; gap: 1em;">
-        <button @click="handlePlayClick">PLAY</button>
-        <button @click="handlePauseClick">PAUSE</button>
-        <button @click="handleResumeClick">RESUME</button>
-        <button @click="handleRestartClick">RESTART</button>
+      <div>
+        <div>White wins: {{whiteWins}}</div>
+        <div>Black wins: {{blackWins}}</div>
       </div>
 
-      <div>
-        <div>Delay in seconds</div>
-        <input v-model="delayInSeconds"/>
+      <div style="display: flex; gap: 1em;">
+        <button v-if="isStart && !isPlaying && !isEndOfSimulations" @click="handlePlayClick">PLAY</button>
+        <button v-if="!isStart && isPlaying && !isEndOfSimulations" @click="handlePauseClick">PAUSE</button>
+        <button v-if="!isStart && !isPlaying && !isEndOfSimulations" @click="handleResumeClick">RESUME</button>
+        <button v-if="!isStart || isEndOfSimulations" @click="handleRestartClick">RESTART</button>
+      </div>
+
+      <div style="display: flex; gap: 1em;">
+        <div>
+          <div>Delay in ms: {{delayInMs}}</div>
+          <div class="slidecontainer">
+            <input v-model="delayInMs" type="range" min="0" max="5000" value="1000" class="slider">
+          </div>
+        </div>
+        <div>
+          <div>Games to be played</div>
+          <input v-model="gamesToBePlayed" type="number" min="1" max="100000"></div>
       </div>
 
 
       <div class="player-containers">
         <div>
-          <div>White player</div>
+          <div>White player ({{whiteHistory.length}})</div>
           <input v-model="whitePlayerEndpoint"/>
           <div class="player-move-history">
             <div v-for="(move, index) in whiteHistory" :key="index">{{ move }}</div>
           </div>
         </div>
         <div>
-          <div>Black player</div>
+          <div>Black player ({{blackHistory.length}})</div>
           <input v-model="blackPlayerEndpoint"/>
           <div class="player-move-history">
             <div v-for="(move, index) in blackHistory" :key="index">{{ move }}</div>
@@ -60,16 +70,18 @@ export default {
   components: {Piece},
   data() {
     return {
-      delayInSeconds: 1,
+      delayInMs: 1000,
       blackPlayerEndpoint: "",
       whitePlayerEndpoint: "",
-      blackHistory: [],
-      whiteHistory: [],
       allHistory: [],
       chess: new Chess(),
       currentPlayer: "w",
       isPlaying: false,
-      message: "White move",
+      isStart: true,
+      isEndOfSimulations: false,
+      whiteWins: 0,
+      blackWins: 0,
+      gamesToBePlayed: 1
     }
   },
 
@@ -89,45 +101,46 @@ export default {
 
             if (this.currentPlayer === "w") {
               this.currentPlayer = "b";
-              this.whiteHistory.push(response.data);
               this.allHistory.push(response.data);
             } else if (this.currentPlayer === "b") {
               this.currentPlayer = "w";
-              this.blackHistory.push(response.data)
               this.allHistory.push(response.data);
             }
 
             if (this.chess.game_over()) {
-              this.message += this.currentPlayer === "w" ? "Black wins!" : "White wins!";
+              if (this.currentPlayer === "w")this.blackWins++;
+              if (this.currentPlayer !== "w")this.whiteWins++;
               this.isPlaying = false;
-            } else if (this.chess.in_check()) {
-              this.message = this.currentPlayer === "w" ? "In check... White move" : "In check... Black move";
-            } else {
-              this.message = this.currentPlayer === "w" ? "White move" : "Black move";
+              this.isEndOfSimulations = true;
             }
           }).catch(
           error => console.log(error)
       )
     },
     handlePlayClick() {
+      this.isStart = false;
       this.isPlaying = true;
+      this.isEndOfSimulations = false;
       this.makeTurn();
     },
     handlePauseClick() {
       this.isPlaying = false;
+      this.isEndOfSimulations = false;
     },
     handleResumeClick() {
       this.isPlaying = true;
       this.makeTurn();
+      this.isEndOfSimulations = false;
     },
     handleRestartClick() {
       this.chess = new Chess();
       this.currentPlayer = "w";
-      this.isPlaying = false;
-      this.message = "White move";
-      this.blackHistory = [];
-      this.whiteHistory = [];
       this.allHistory = [];
+      this.isPlaying = false;
+      this.isStart = true;
+      this.isEndOfSimulations = false;
+      this.whiteWins = 0;
+      this.blackWins = 0;
     },
     isEvenRow(index) {
       if (index < 8)
@@ -165,12 +178,30 @@ export default {
       if (this.isPlaying) {
         setTimeout(() => {
           if (this.isPlaying) this.makeTurn();
-        }, Number(this.delayInSeconds) * 1000)
+        }, this.delayInMs)
       }
     }
   },
 
   computed: {
+    blackHistory(){
+      const moves = [];
+      for (let i = 0; i < this.allHistory.length; i++) {
+        if (i % 2 !== 0){
+          moves.push(this.allHistory[i]);
+        }
+      }
+      return moves;
+    },
+    whiteHistory(){
+      const moves = [];
+      for (let i = 0; i < this.allHistory.length; i++) {
+        if (i % 2 === 0){
+          moves.push(this.allHistory[i]);
+        }
+      }
+      return moves;
+    },
     gameSquares() {
       if (this.currentPlayer) {//triggers update
         const squares = [];
