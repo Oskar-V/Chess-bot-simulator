@@ -3,6 +3,7 @@
 
     <div class="controls-container">
       <div>
+        <div>Games played: {{gameCounter}}</div>
         <div>White wins: {{whiteWins}}</div>
         <div>Black wins: {{blackWins}}</div>
       </div>
@@ -11,7 +12,7 @@
         <button v-if="isStart && !isPlaying && !isEndOfSimulations" @click="handlePlayClick">PLAY</button>
         <button v-if="!isStart && isPlaying && !isEndOfSimulations" @click="handlePauseClick">PAUSE</button>
         <button v-if="!isStart && !isPlaying && !isEndOfSimulations" @click="handleResumeClick">RESUME</button>
-        <button v-if="!isStart || isEndOfSimulations" @click="handleRestartClick">RESTART</button>
+        <button v-if="!isStart || isEndOfSimulations" @click="handleRestartClick(true)">RESTART</button>
       </div>
 
       <div style="display: flex; gap: 1em;">
@@ -81,7 +82,8 @@ export default {
       isEndOfSimulations: false,
       whiteWins: 0,
       blackWins: 0,
-      gamesToBePlayed: 1
+      gamesToBePlayed: 1,
+      gameCounter: 0
     }
   },
 
@@ -108,10 +110,20 @@ export default {
             }
 
             if (this.chess.game_over()) {
-              if (this.currentPlayer === "w")this.blackWins++;
-              if (this.currentPlayer !== "w")this.whiteWins++;
+              this.gameCounter++;
+              if (this.chess.in_draw() || this.chess.in_stalemate()){
+                this.blackWins += 0.5;
+                this.whiteWins += 0.5;
+              }else{
+                if (this.currentPlayer === "w")this.blackWins++;
+                if (this.currentPlayer !== "w")this.whiteWins++;
+              }
               this.isPlaying = false;
               this.isEndOfSimulations = true;
+              if (Number(this.gameCounter) < Number(this.gamesToBePlayed)){
+                this.handleRestartClick(false);
+                this.handlePlayClick();
+              }
             }
           }).catch(
           error => console.log(error)
@@ -132,15 +144,18 @@ export default {
       this.makeTurn();
       this.isEndOfSimulations = false;
     },
-    handleRestartClick() {
+    handleRestartClick(hardReset) {
+      this.isPlaying = false;
+      this.isStart = true;
       this.chess = new Chess();
       this.currentPlayer = "w";
       this.allHistory = [];
-      this.isPlaying = false;
-      this.isStart = true;
       this.isEndOfSimulations = false;
-      this.whiteWins = 0;
-      this.blackWins = 0;
+      if (hardReset){
+        this.whiteWins = 0;
+        this.blackWins = 0;
+        this.gameCounter = 0;
+      }
     },
     isEvenRow(index) {
       if (index < 8)
@@ -175,10 +190,10 @@ export default {
 
   watch: {
     currentPlayer() {
-      if (this.isPlaying) {
+      if (this.isPlaying ) {
         setTimeout(() => {
-          if (this.isPlaying) this.makeTurn();
-        }, this.delayInMs)
+          if (this.isPlaying ) this.makeTurn();
+        }, Number(this.delayInMs))
       }
     }
   },
