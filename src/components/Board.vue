@@ -50,6 +50,19 @@
 
     </div>
 
+
+    <div style="display: flex; flex-direction: column; height: 100%; margin-left: 6em;">
+      <div
+          class="board-coords"
+          v-for="i in 8"
+          :key="`${i}`"
+          style="height: 6rem; display: flex; align-items: center;  border: solid transparent;border-bottom-style: none;"
+      >
+        {{ 8 - i }}
+      </div>
+    </div>
+
+
     <div class="field">
       <div
           v-for="(square, index) in gameSquares"
@@ -58,6 +71,14 @@
           :style="index > 55 ? 'border-bottom: solid' : ''"
       >
         <Piece v-if="square" :type="square.type" :color="square.color" :index="index"/>
+      </div>
+      <div
+          class="board-coords"
+          v-for="(char, index) in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']"
+          :key="`${index}${char}`"
+          style="display: flex; justify-content: center"
+      >
+        {{ char }}
       </div>
     </div>
   </div>
@@ -247,6 +268,10 @@ button {
   margin: 10px;
 }
 
+.board-coords{
+  font-size: 25px;
+}
+
 .player-move-history {
   border: solid 1px black;
   display: flex;
@@ -275,13 +300,12 @@ button {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  align-items: center;
 }
 
 .field {
   display: grid;
-  grid-template-columns: repeat(8, 6em);
-  margin-left: 2em;
+  grid-template-columns: repeat(8, 6rem);
+  margin-left: 10px;
 }
 
 .squareWhite {
@@ -289,8 +313,8 @@ button {
   border-bottom: none;
   background-color: #b9b9b6;
   display: flex;
-  width: 6em;
-  height: 6em;
+  width: 6rem;
+  height: 6rem;
   justify-content: center;
   align-items: center;
 }
@@ -300,8 +324,8 @@ button {
   border-bottom: none;
   background-color: darkslategrey;
   display: flex;
-  width: 6em;
-  height: 6em;
+  width: 6rem;
+  height: 6rem;
   justify-content: center;
   align-items: center;
 }
