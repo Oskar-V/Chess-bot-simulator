@@ -3,9 +3,9 @@
 
     <div class="controls-container">
       <div>
-        <div>Games played: {{gameCounter}}</div>
-        <div>White wins: {{whiteWins}}</div>
-        <div>Black wins: {{blackWins}}</div>
+        <div>Games played: {{ gameCounter }}</div>
+        <div>White wins: {{ whiteWins }}</div>
+        <div>Black wins: {{ blackWins }}</div>
       </div>
 
       <div style="display: flex; gap: 1em;">
@@ -18,7 +18,7 @@
       <div style="display: flex; gap: 1em;">
         <div>
           <div>Delay in ms</div>
-            <input v-model="delayInMs" type="number" min="0" max="5000">
+          <input v-model="delayInMs" type="number" min="0" max="5000">
         </div>
         <div>
           <div>Games to be played</div>
@@ -33,14 +33,18 @@
 
       <div class="player-containers">
         <div>
-          <div>White player ({{whiteHistory.length}})</div>
+          <div>White player ({{ whiteHistory.length }})</div>
           <input v-model="whitePlayerEndpoint"/>
           <div class="player-move-history">
             <div v-for="(move, index) in whiteHistory" :key="index">{{ move }}</div>
           </div>
         </div>
+        <div class="switch-container">
+          <div>switch</div>
+          <img @click="handleSwitchClick" src="../assets/exchange-alt-solid.svg" class="switch"/>
+        </div>
         <div>
-          <div>Black player ({{blackHistory.length}})</div>
+          <div>Black player ({{ blackHistory.length }})</div>
           <input v-model="blackPlayerEndpoint"/>
           <div class="player-move-history">
             <div v-for="(move, index) in blackHistory" :key="index">{{ move }}</div>
@@ -58,7 +62,7 @@
           :key="`${i}`"
           style="height: 6rem; display: flex; align-items: center;  border: solid transparent;border-bottom-style: none;"
       >
-        {{ 8 - i }}
+        {{ 9 - i }}
       </div>
     </div>
 
@@ -109,11 +113,16 @@ export default {
       gamesToBePlayed: 1,
       gameCounter: 0,
       moveLimitPerPlayer: 100,
-      moveTriggerer:false
+      moveTriggerer: false
     }
   },
 
   methods: {
+    handleSwitchClick(){
+      const helper = this.blackPlayerEndpoint;
+      this.blackPlayerEndpoint = this.whitePlayerEndpoint;
+      this.whitePlayerEndpoint = helper;
+    },
     makeTurn() {
       const endpoint = this.currentPlayer === "w" ? this.whitePlayerEndpoint : this.blackPlayerEndpoint;
 
@@ -125,6 +134,8 @@ export default {
           }
       )
           .then(response => {
+            if (this.isStart && !this.isPlaying && !this.isEndOfSimulations) return;
+
             this.chess.move(response.data);
 
             if (this.currentPlayer === "w") {
@@ -135,23 +146,23 @@ export default {
               this.allHistory.push(response.data);
             }
 
-            const moveLimitExceeded = Number(this.moveLimitPerPlayer) <= this.allHistory.length / 2 ;
-            if (this.chess.game_over() || moveLimitExceeded){
+            const moveLimitExceeded = Number(this.moveLimitPerPlayer) <= this.allHistory.length / 2;
+            if (this.chess.game_over() || moveLimitExceeded) {
               this.gameCounter++;
-              if (this.chess.in_draw() || this.chess.in_stalemate() || moveLimitExceeded){
+              if (this.chess.in_draw() || this.chess.in_stalemate() || moveLimitExceeded) {
                 this.blackWins += 0.5;
                 this.whiteWins += 0.5;
-              }else{
-                if (this.currentPlayer === "w")this.blackWins++;
-                if (this.currentPlayer !== "w")this.whiteWins++;
+              } else {
+                if (this.currentPlayer === "w") this.blackWins++;
+                if (this.currentPlayer !== "w") this.whiteWins++;
               }
               this.isPlaying = false;
               this.isEndOfSimulations = true;
-              if (Number(this.gameCounter) < Number(this.gamesToBePlayed)){
+              if (Number(this.gameCounter) < Number(this.gamesToBePlayed)) {
                 this.handleRestartClick(false);
                 this.handlePlayClick();
               }
-            }else{
+            } else {
               this.moveTriggerer = !this.moveTriggerer;
             }
           }).catch(
@@ -180,7 +191,7 @@ export default {
       this.currentPlayer = "w";
       this.allHistory = [];
       this.isEndOfSimulations = false;
-      if (hardReset){
+      if (hardReset) {
         this.whiteWins = 0;
         this.blackWins = 0;
         this.gameCounter = 0;
@@ -219,28 +230,28 @@ export default {
 
   watch: {
     moveTriggerer() {
-      if (this.isPlaying ) {
+      if (this.isPlaying) {
         setTimeout(() => {
-          if (this.isPlaying ) this.makeTurn();
+          if (this.isPlaying) this.makeTurn();
         }, Number(this.delayInMs))
       }
     }
   },
 
   computed: {
-    blackHistory(){
+    blackHistory() {
       const moves = [];
       for (let i = 0; i < this.allHistory.length; i++) {
-        if (i % 2 !== 0){
+        if (i % 2 !== 0) {
           moves.push(this.allHistory[i]);
         }
       }
       return moves;
     },
-    whiteHistory(){
+    whiteHistory() {
       const moves = [];
       for (let i = 0; i < this.allHistory.length; i++) {
-        if (i % 2 === 0){
+        if (i % 2 === 0) {
           moves.push(this.allHistory[i]);
         }
       }
@@ -268,7 +279,7 @@ button {
   margin: 10px;
 }
 
-.board-coords{
+.board-coords {
   font-size: 25px;
 }
 
@@ -328,5 +339,21 @@ button {
   height: 6rem;
   justify-content: center;
   align-items: center;
+}
+
+.switch-container{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.switch{
+  width: 1.2em;
+  height: 1.2em;
+}
+
+.switch:hover{
+  cursor: pointer;
+  opacity: 0.7;
 }
 </style>
