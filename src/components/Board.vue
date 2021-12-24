@@ -3,10 +3,15 @@
 
     <div class="controls-container">
       <div>
-        <div>Games played: {{ gameCounter }}</div>
-        <div v-if="gameCounter % 2 === 0">{{player1 ? player1 : "-"}} wins: {{ this.scores[player1] }}</div>
-        <div>{{ player2 ? player2 : "-" }} wins: {{ this.scores[player2] }}</div>
-        <div v-if="gameCounter % 2 !== 0">{{player1 ? player1 : "-"}} wins: {{ this.scores[player1] }}</div>
+        <div>Games played: {{ gameCounter }}</div><br/>
+        <div v-if="gameCounter % 2 === 0">{{player1 ? player1 : "-"}} wins: {{ scoresData[0] }}</div>
+        <div v-if="gameCounter % 2 === 0">{{player1 ? player1 : "-"}} ties: {{ scoresData[1] }}</div>
+        <br  v-if="gameCounter % 2 === 0"/>
+        <div>{{ player2 ? player2 : "-" }} wins: {{ scoresData[2]}}</div>
+        <div>{{ player2 ? player2 : "-" }} ties: {{ scoresData[3] }}</div>
+        <br  v-if="gameCounter % 2 !== 0"/>
+        <div v-if="gameCounter % 2 !== 0">{{player1 ? player1 : "-"}} wins: {{ scoresData[0]  }}</div>
+        <div v-if="gameCounter % 2 !== 0">{{player1 ? player1 : "-"}} ties: {{ scoresData[1] }}</div>
       </div>
 
       <div style="display: flex; gap: 1em;">
@@ -155,12 +160,13 @@ export default {
             if (this.chess.game_over() || moveLimitExceeded) {
               this.gameCounter++;
               if (this.chess.in_draw() || this.chess.in_stalemate() || moveLimitExceeded) {
-                this.scores[this.player1] += 0.5;
-                this.scores[this.player2] += 0.5;
+                this.scores[this.player1]["ties"] += 0.5;
+                this.scores[this.player2]["ties"] += 0.5;
               } else {
-                if (this.currentPlayer === "w") this.scores[this.player2]++;
-                if (this.currentPlayer !== "w") this.scores[this.player1]++;
+                if (this.currentPlayer === "w") this.scores[this.player2]["wins"]++;
+                if (this.currentPlayer !== "w") this.scores[this.player1]["wins"]++;
               }
+              this.scores = JSON.parse(JSON.stringify(this.scores));
               this.isPlaying = false;
               this.isEndOfSimulations = true;
               if (Number(this.gameCounter) < Number(this.gamesToBePlayed)) {
@@ -180,8 +186,8 @@ export default {
       this.isPlaying = true;
       this.isEndOfSimulations = false;
       if (this.scores[this.player1] === undefined){
-        this.scores[this.player1] = 0;
-        this.scores[this.player2] = 0;
+        this.scores[this.player1] = {wins: 0, ties: 0};
+        this.scores[this.player2] = {wins: 0, ties: 0};
       }
       this.makeTurn();
     },
@@ -278,7 +284,19 @@ export default {
         return squares;
       }
       return null;
-    }
+    },
+    scoresData(){
+      const data = [0 ,0 ,0 ,0];
+      if (this.scores[this.player1]){
+        data[0] = this.scores[this.player1]["wins"];
+        data[1] = this.scores[this.player1]["ties"];
+      }
+      if (this.scores[this.player2]){
+        data[2] = this.scores[this.player2]["wins"];
+        data[3] = this.scores[this.player2]["ties"];
+      }
+      return data;
+    },
   }
 }
 </script>
