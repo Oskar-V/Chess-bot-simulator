@@ -4,8 +4,9 @@
     <div class="controls-container">
       <div>
         <div>Games played: {{ gameCounter }}</div>
-        <div>White wins: {{ whiteWins }}</div>
-        <div>Black wins: {{ blackWins }}</div>
+        <div v-if="gameCounter % 2 === 0">{{player1 ? player1 : "-"}} wins: {{ this.scores[player1] }}</div>
+        <div>{{ player2 ? player2 : "-" }} wins: {{ this.scores[player2] }}</div>
+        <div v-if="gameCounter % 2 !== 0">{{player1 ? player1 : "-"}} wins: {{ this.scores[player1] }}</div>
       </div>
 
       <div style="display: flex; gap: 1em;">
@@ -15,7 +16,7 @@
         <button v-if="!isStart || isEndOfSimulations" @click="handleRestartClick(true)">RESTART</button>
       </div>
 
-      <div style="display: flex; gap: 1em;">
+      <div class="controls-inner-container">
         <div>
           <div>Delay in ms</div>
           <input v-model="delayInMs" type="number" min="0" max="5000">
@@ -28,15 +29,19 @@
           <div>Move limit per player</div>
           <input v-model="moveLimitPerPlayer" type="number" min="1" max="100000">
         </div>
+        <div>
+          <div>Switch sides automatically between games</div>
+          <input class="switch" type="checkbox" name="scales" :checked="autoSwitchOnGames" >
+        </div>
       </div>
 
 
       <div class="player-containers">
         <div>
-          <div>White player ({{ whiteHistory.length }})</div>
-          <input v-model="whitePlayerEndpoint"/>
+          <div>Player 1 (white) ({{ player1History.length }})</div>
+          <input v-model="player1"/>
           <div class="player-move-history">
-            <div v-for="(move, index) in whiteHistory" :key="index">{{ move }}</div>
+            <div v-for="(move, index) in player1History" :key="index">{{ move }}</div>
           </div>
         </div>
         <div class="switch-container">
@@ -44,10 +49,10 @@
           <img @click="handleSwitchClick" src="../assets/exchange-alt-solid.svg" class="switch"/>
         </div>
         <div>
-          <div>Black player ({{ blackHistory.length }})</div>
-          <input v-model="blackPlayerEndpoint"/>
+          <div>Player 2 (black) ({{ player2History.length }})</div>
+          <input v-model="player2"/>
           <div class="player-move-history">
-            <div v-for="(move, index) in blackHistory" :key="index">{{ move }}</div>
+            <div v-for="(move, index) in player2History" :key="index">{{ move }}</div>
           </div>
         </div>
       </div>
@@ -100,31 +105,31 @@ export default {
   data() {
     return {
       delayInMs: 1000,
-      blackPlayerEndpoint: "",
-      whitePlayerEndpoint: "",
+      player2: "",
+      player1: "",
       allHistory: [],
       chess: new Chess(),
       currentPlayer: "w",
       isPlaying: false,
       isStart: true,
       isEndOfSimulations: false,
-      whiteWins: 0,
-      blackWins: 0,
       gamesToBePlayed: 1,
       gameCounter: 0,
       moveLimitPerPlayer: 100,
-      moveTriggerer: false
+      moveTriggerer: false,
+      scores: {},
+      autoSwitchOnGames: true
     }
   },
 
   methods: {
-    handleSwitchClick(){
-      const helper = this.blackPlayerEndpoint;
-      this.blackPlayerEndpoint = this.whitePlayerEndpoint;
-      this.whitePlayerEndpoint = helper;
+    handleSwitchClick() {
+      const helper = this.player2;
+      this.player2 = this.player1;
+      this.player1 = helper;
     },
     makeTurn() {
-      const endpoint = this.currentPlayer === "w" ? this.whitePlayerEndpoint : this.blackPlayerEndpoint;
+      const endpoint = this.currentPlayer === "w" ? this.player1 : this.player2;
 
       axios.post(endpoint, this.allHistory.join(" "),
           {
@@ -150,16 +155,17 @@ export default {
             if (this.chess.game_over() || moveLimitExceeded) {
               this.gameCounter++;
               if (this.chess.in_draw() || this.chess.in_stalemate() || moveLimitExceeded) {
-                this.blackWins += 0.5;
-                this.whiteWins += 0.5;
+                this.scores[this.player1] += 0.5;
+                this.scores[this.player2] += 0.5;
               } else {
-                if (this.currentPlayer === "w") this.blackWins++;
-                if (this.currentPlayer !== "w") this.whiteWins++;
+                if (this.currentPlayer === "w") this.scores[this.player2]++;
+                if (this.currentPlayer !== "w") this.scores[this.player1]++;
               }
               this.isPlaying = false;
               this.isEndOfSimulations = true;
               if (Number(this.gameCounter) < Number(this.gamesToBePlayed)) {
                 this.handleRestartClick(false);
+                if (this.autoSwitchOnGames)this.handleSwitchClick();
                 this.handlePlayClick();
               }
             } else {
@@ -173,6 +179,10 @@ export default {
       this.isStart = false;
       this.isPlaying = true;
       this.isEndOfSimulations = false;
+      if (this.scores[this.player1] === undefined){
+        this.scores[this.player1] = 0;
+        this.scores[this.player2] = 0;
+      }
       this.makeTurn();
     },
     handlePauseClick() {
@@ -192,8 +202,7 @@ export default {
       this.allHistory = [];
       this.isEndOfSimulations = false;
       if (hardReset) {
-        this.whiteWins = 0;
-        this.blackWins = 0;
+        this.scores = {};
         this.gameCounter = 0;
       }
     },
@@ -239,19 +248,19 @@ export default {
   },
 
   computed: {
-    blackHistory() {
+    player1History() {
       const moves = [];
       for (let i = 0; i < this.allHistory.length; i++) {
-        if (i % 2 !== 0) {
+        if (i % 2 === 0) {
           moves.push(this.allHistory[i]);
         }
       }
       return moves;
     },
-    whiteHistory() {
+    player2History() {
       const moves = [];
       for (let i = 0; i < this.allHistory.length; i++) {
-        if (i % 2 === 0) {
+        if (i % 2 !== 0) {
           moves.push(this.allHistory[i]);
         }
       }
@@ -306,6 +315,11 @@ button {
   gap: 4em;
 }
 
+.controls-inner-container{
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
 
 .container {
   display: flex;
@@ -341,18 +355,18 @@ button {
   align-items: center;
 }
 
-.switch-container{
+.switch-container {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.switch{
+.switch {
   width: 1.2em;
   height: 1.2em;
 }
 
-.switch:hover{
+.switch:hover {
   cursor: pointer;
   opacity: 0.7;
 }
