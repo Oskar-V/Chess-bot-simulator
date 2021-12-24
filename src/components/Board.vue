@@ -44,7 +44,20 @@
       <div class="player-containers">
         <div>
           <div>Player 1 (white) ({{ player1History.length }})</div>
-          <input v-model="player1"/>
+          <Select
+              v-model="player1"
+              allow-create
+              clearable
+              filterable
+              no-data-text="No endpoints here..."
+              placeholder="Select or enter endpoint">
+            <Option
+                v-for="item in endpointsMemory"
+                :key="item"
+                :label="item"
+                :value="item">
+            </Option>
+          </Select>
           <div class="player-move-history">
             <div v-for="(move, index) in player1History" :key="index">{{ move }}</div>
           </div>
@@ -55,7 +68,20 @@
         </div>
         <div>
           <div>Player 2 (black) ({{ player2History.length }})</div>
-          <input v-model="player2"/>
+          <Select
+              v-model="player2"
+              allow-create
+              clearable
+              filterable
+              no-data-text="No endpoints here..."
+              placeholder="Select or enter endpoint">
+            <Option
+                v-for="item in endpointsMemory"
+                :key="item"
+                :label="item"
+                :value="item">
+            </Option>
+          </Select>
           <div class="player-move-history">
             <div v-for="(move, index) in player2History" :key="index">{{ move }}</div>
           </div>
@@ -102,11 +128,12 @@
 import Piece from "./Piece";
 import Chess from "chess.js";
 import axios from 'axios';
+import {Select, Option} from "element-ui";
 
 export default {
 
   name: 'Board',
-  components: {Piece},
+  components: {Piece, Select, Option},
   data() {
     return {
       delayInMs: 1000,
@@ -123,7 +150,8 @@ export default {
       moveLimitPerPlayer: 100,
       moveTriggerer: false,
       scores: {},
-      autoSwitchOnGames: true
+      autoSwitchOnGames: true,
+      endpointsMemory: []
     }
   },
 
@@ -182,6 +210,7 @@ export default {
       )
     },
     handlePlayClick() {
+      this.updateEndpointsMemory();
       this.isStart = false;
       this.isPlaying = true;
       this.isEndOfSimulations = false;
@@ -228,6 +257,15 @@ export default {
       if (index < 56)
         return true;
       return false;
+    },
+    updateEndpointsMemory(){
+      if (!this.endpointsMemory.includes(this.player1)){
+          this.endpointsMemory.push(this.player1);
+      }
+      if (!this.endpointsMemory.includes(this.player2)){
+        this.endpointsMemory.push(this.player2);
+      }
+      localStorage.setItem("endpoints-memory", JSON.stringify(this.endpointsMemory));
     },
     getSquareColorClass(index) {
       const isEvenRow = this.isEvenRow(index);
@@ -298,6 +336,10 @@ export default {
       }
       return data;
     },
+  },
+  mounted() {
+    if (localStorage.getItem("endpoints-memory"))
+      this.endpointsMemory = JSON.parse(localStorage.getItem("endpoints-memory"))
   }
 }
 </script>
@@ -331,7 +373,7 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4em;
+  gap: 2em;
 }
 
 .controls-inner-container{
