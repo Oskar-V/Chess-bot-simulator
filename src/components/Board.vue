@@ -36,7 +36,7 @@
         </div>
         <div>
           <div>Switch sides automatically between games</div>
-          <input class="switch" type="checkbox" name="scales" :checked="autoSwitchOnGames" >
+          <input class="switch" type="checkbox" name="scales" v-model="autoSwitchOnGames" >
         </div>
       </div>
 
@@ -254,6 +254,7 @@ export default {
   },
 
   computed: {
+
     player1History() {
       const moves = [];
       for (let i = 0; i < this.allHistory.length; i++) {
