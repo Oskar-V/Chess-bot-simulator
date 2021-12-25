@@ -3,15 +3,16 @@
 
     <div class="controls-container">
       <div>
-        <div>Games played: {{ gameCounter }}</div><br/>
-        <div v-if="gameCounter % 2 === 0">{{player1 ? player1 : "-"}} wins: {{ scoresData[0] }}</div>
-        <div v-if="gameCounter % 2 === 0">{{player1 ? player1 : "-"}} ties: {{ scoresData[1] }}</div>
-        <br  v-if="gameCounter % 2 === 0"/>
-        <div>{{ player2 ? player2 : "-" }} wins: {{ scoresData[2]}}</div>
+        <div>Games played: {{ gameCounter }}</div>
+        <br/>
+        <div v-if="gameCounter % 2 === 0">{{ player1 ? player1 : "-" }} wins: {{ scoresData[0] }}</div>
+        <div v-if="gameCounter % 2 === 0">{{ player1 ? player1 : "-" }} ties: {{ scoresData[1] }}</div>
+        <br v-if="gameCounter % 2 === 0"/>
+        <div>{{ player2 ? player2 : "-" }} wins: {{ scoresData[2] }}</div>
         <div>{{ player2 ? player2 : "-" }} ties: {{ scoresData[3] }}</div>
-        <br  v-if="gameCounter % 2 !== 0"/>
-        <div v-if="gameCounter % 2 !== 0">{{player1 ? player1 : "-"}} wins: {{ scoresData[0]  }}</div>
-        <div v-if="gameCounter % 2 !== 0">{{player1 ? player1 : "-"}} ties: {{ scoresData[1] }}</div>
+        <br v-if="gameCounter % 2 !== 0"/>
+        <div v-if="gameCounter % 2 !== 0">{{ player1 ? player1 : "-" }} wins: {{ scoresData[0] }}</div>
+        <div v-if="gameCounter % 2 !== 0">{{ player1 ? player1 : "-" }} ties: {{ scoresData[1] }}</div>
       </div>
 
       <div style="display: flex; gap: 1em;">
@@ -36,7 +37,7 @@
         </div>
         <div>
           <div>Switch sides automatically between games</div>
-          <input class="switch" type="checkbox" name="scales" v-model="autoSwitchOnGames" >
+          <input class="switch" type="checkbox" name="scales" v-model="autoSwitchOnGames">
         </div>
       </div>
 
@@ -57,22 +58,15 @@
                 :label="item"
                 :value="item">
               <div class="dropdown-option-container">
-                {{item}}
+                {{ item }}
                 <button v-if="item !== 'Manual'" @click="handleRemoveClick(item)">remove</button>
               </div>
             </Option>
           </Select>
-          <div v-if="player1 !== 'Manual'" class="player-move-history">
+          <div class="player-move-history">
             <div v-for="(move, index) in player1History" :key="index">{{ move }}</div>
           </div>
-          <div v-else-if="player1 === 'Manual' && currentPlayer === 'w' && isPlaying" class="player-available-moves">
-              <button v-for="(move, index) in currentMoves" :key="index" class="move-button" @click="handleManualMoveClick(move)">
-                {{ move }}
-              </button>
-          </div>
-          <div v-else class="player-move-history"></div>
         </div>
-
 
 
         <div class="switch-container">
@@ -96,20 +90,14 @@
                 :label="item"
                 :value="item">
               <div class="dropdown-option-container">
-                {{item}}
+                {{ item }}
                 <button v-if="item !== 'Manual'" @click="handleRemoveClick(item)">remove</button>
               </div>
             </Option>
           </Select>
-          <div v-if="player2 !== 'Manual'" class="player-move-history">
+          <div class="player-move-history">
             <div v-for="(move, index) in player2History" :key="index">{{ move }}</div>
           </div>
-          <div v-else-if="player2 === 'Manual' && currentPlayer === 'b' && isPlaying" class="player-available-moves">
-            <button v-for="(move, index) in currentMoves" :key="index" class="move-button" @click="handleManualMoveClick(move)">
-              {{ move }}
-            </button>
-          </div>
-          <div v-else class="player-move-history"></div>
         </div>
       </div>
 
@@ -132,10 +120,22 @@
       <div
           v-for="(square, index) in gameSquares"
           :key="index"
-          :class="[getSquareColorClass(index)]"
+          :class="[getSquareColorClass(index), square.isDestinationSquare ? 'destination-square': '']"
           :style="index > 55 ? 'border-bottom: solid' : ''"
+          @click="handleDestinationClick(square)"
       >
-        <Piece v-if="square" :type="square.type" :color="square.color" :index="index"/>
+        <Piece
+            v-if="square.squareType === 'pieceSquare'"
+            :ref="`chessPiece${index}`"
+            :index="index"
+            :type="square.type"
+            :color="square.color"
+            :availableMoves="currentMovesVerbose"
+            :currentPlayerColor="currentPlayer"
+            :isManualPlayForThisPiece="(square.color === 'w' && player1 === 'Manual' || square.color === 'b' && player2 === 'Manual') && isPlaying"
+            @pieceSelect="unSelectPieces"
+            @destinationSquaresChange="handleDestinationSquaresChange"
+        />
       </div>
       <div
           class="board-coords"
@@ -176,25 +176,43 @@ export default {
       moveTriggerer: false,
       scores: {},
       autoSwitchOnGames: true,
-      endpointsMemory: []
+      endpointsMemory: [],
+      destinationSquareIndexesObjects: []
     }
   },
 
   methods: {
-    handleRemoveClick(item){
+    handleDestinationClick(square) {
+      if (!square.isDestinationSquare) return;
+      this.handleManualMoveClick(square.moveToThisSquare);
+    },
+    handleRemoveClick(item) {
       const index = this.endpointsMemory.indexOf(item);
       if (index > -1) {
         this.endpointsMemory.splice(index, 1);
       }
       localStorage.setItem("endpoints-memory", JSON.stringify(this.endpointsMemory));
-      if (this.player1 === item)  this.player1 = "";
-      if (this.player2 === item)  this.player2 = "";
+      if (this.player1 === item) this.player1 = "";
+      if (this.player2 === item) this.player2 = "";
     },
-    handleManualMoveClick(move){
+    unSelectPieces() {
+      for (let i = 0; i < 64; i++) {
+        const ref = `chessPiece${i}`;
+        if (!this.$refs[ref]) continue;
+        if (!this.$refs[ref][0]) continue;
+        this.$refs[ref][0].unSelect();
+      }
+    },
+    handleDestinationSquaresChange(destinations) {
+      this.destinationSquareIndexesObjects = destinations;
+    },
+    handleManualMoveClick(move) {
+      this.unSelectPieces();
+      this.destinationSquareIndexesObjects = [];
       this.executeMove(move);
       this.checkGameStatus();
     },
-    executeMove(move){
+    executeMove(move) {
       this.chess.move(move);
       if (this.currentPlayer === "w") {
         this.currentPlayer = "b";
@@ -204,7 +222,7 @@ export default {
         this.allHistory.push(move);
       }
     },
-    checkGameStatus(){
+    checkGameStatus() {
       const moveLimitExceeded = Number(this.moveLimitPerPlayer) <= this.allHistory.length / 2;
       if (this.chess.game_over() || moveLimitExceeded) {
         this.gameCounter++;
@@ -220,7 +238,7 @@ export default {
         this.isEndOfSimulations = true;
         if (Number(this.gameCounter) < Number(this.gamesToBePlayed)) {
           this.handleRestartClick(false);
-          if (this.autoSwitchOnGames)this.handleSwitchClick();
+          if (this.autoSwitchOnGames) this.handleSwitchClick();
           this.handlePlayClick();
         }
       } else {
@@ -255,7 +273,7 @@ export default {
       this.isStart = false;
       this.isPlaying = true;
       this.isEndOfSimulations = false;
-      if (this.scores[this.player1] === undefined){
+      if (this.scores[this.player1] === undefined) {
         this.scores[this.player1] = {wins: 0, ties: 0};
         this.scores[this.player2] = {wins: 0, ties: 0};
       }
@@ -299,11 +317,11 @@ export default {
         return true;
       return false;
     },
-    updateEndpointsMemory(){
-      if (!this.endpointsMemory.includes(this.player1) && this.player1.trim() !== ""){
-          this.endpointsMemory.push(this.player1);
+    updateEndpointsMemory() {
+      if (!this.endpointsMemory.includes(this.player1) && this.player1.trim() !== "") {
+        this.endpointsMemory.push(this.player1);
       }
-      if (!this.endpointsMemory.includes(this.player2) && this.player2.trim() !== ""){
+      if (!this.endpointsMemory.includes(this.player2) && this.player2.trim() !== "") {
         this.endpointsMemory.push(this.player2);
       }
       localStorage.setItem("endpoints-memory", JSON.stringify(this.endpointsMemory));
@@ -319,13 +337,13 @@ export default {
         return "squareBlack"
       if (!isEvenRow && !isEvenCol)
         return "squareWhite"
-    },
+    }
   },
 
   watch: {
     moveTriggerer() {
       if (this.isPlaying) {
-        if (!(this.currentPlayer === 'w' && this.player1 === 'Manual' || this.currentPlayer === 'b' && this.player2 === 'Manual')){
+        if (!(this.currentPlayer === 'w' && this.player1 === 'Manual' || this.currentPlayer === 'b' && this.player2 === 'Manual')) {
           setTimeout(() => {
             if (this.isPlaying) this.makeAutomaticTurn();
           }, Number(this.delayInMs))
@@ -353,26 +371,36 @@ export default {
       }
       return moves;
     },
-    gameSquares() {
-      if (this.currentPlayer) {//triggers update
+    gameSquares: {
+      cache: false,
+      get() {
         const squares = [];
         for (let i = 0; i < this.chess.board().length; i++) {
           for (let j = 0; j < this.chess.board()[0].length; j++) {
-            const ruut = this.chess.board()[i][j];
-            squares.push(ruut);
+            let sq = this.chess.board()[i][j];
+            if (sq === null) {
+              sq = {squareType: 'emptySquare', 'isDestinationSquare': false};
+            } else {
+              sq['squareType'] = 'pieceSquare';
+              sq['isDestinationSquare'] = false;
+            }
+            squares.push(sq);
           }
         }
+        this.destinationSquareIndexesObjects.forEach(destSquare => {
+          squares[destSquare.squareIndex].isDestinationSquare = true;
+          squares[destSquare.squareIndex]['moveToThisSquare'] = destSquare.move;
+        })
         return squares;
-      }
-      return null;
+      },
     },
-    scoresData(){
-      const data = [0 ,0 ,0 ,0];
-      if (this.scores[this.player1]){
+    scoresData() {
+      const data = [0, 0, 0, 0];
+      if (this.scores[this.player1]) {
         data[0] = this.scores[this.player1]["wins"];
         data[1] = this.scores[this.player1]["ties"];
       }
-      if (this.scores[this.player2]){
+      if (this.scores[this.player2]) {
         data[2] = this.scores[this.player2]["wins"];
         data[3] = this.scores[this.player2]["ties"];
       }
@@ -382,6 +410,12 @@ export default {
       cache: false,
       get() {
         return this.chess.moves();
+      },
+    },
+    currentMovesVerbose: {
+      cache: false,
+      get() {
+        return this.chess.moves({verbose: true});
       },
     },
   },
@@ -414,7 +448,7 @@ button {
   overflow-y: scroll;
 }
 
-.player-available-moves{
+.player-available-moves {
   border: solid 1px black;
   display: flex;
   flex-direction: row;
@@ -425,7 +459,7 @@ button {
   overflow-y: scroll;
 }
 
-.move-button:hover{
+.move-button:hover {
   opacity: 0.7;
   cursor: pointer;
 }
@@ -444,7 +478,7 @@ button {
   gap: 2em;
 }
 
-.controls-inner-container{
+.controls-inner-container {
   display: flex;
   flex-direction: column;
   gap: 1em;
@@ -500,12 +534,21 @@ button {
   opacity: 0.7;
 }
 
-.dropdown-option-container{
+.dropdown-option-container {
   display: flex;
   justify-content: space-between;
 }
 
-button:hover{
+button:hover {
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.destination-square {
+  background-color: #5daf34;
+}
+
+.destination-square:hover {
   opacity: 0.7;
   cursor: pointer;
 }
