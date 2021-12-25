@@ -58,7 +58,7 @@
                 :value="item">
               <div class="dropdown-option-container">
                 {{item}}
-                <button @click="handleRemoveClick(item)">remove</button>
+                <button v-if="item !== 'Manual'" @click="handleRemoveClick(item)">remove</button>
               </div>
             </Option>
           </Select>
@@ -97,7 +97,7 @@
                 :value="item">
               <div class="dropdown-option-container">
                 {{item}}
-                <button @click="handleRemoveClick(item)">remove</button>
+                <button v-if="item !== 'Manual'" @click="handleRemoveClick(item)">remove</button>
               </div>
             </Option>
           </Select>
