@@ -56,6 +56,10 @@
                 :key="item"
                 :label="item"
                 :value="item">
+              <div class="dropdown-option-container">
+                {{item}}
+                <button @click="handleRemoveClick(item)">remove</button>
+              </div>
             </Option>
           </Select>
           <div v-if="player1 !== 'Manual'" class="player-move-history">
@@ -91,6 +95,10 @@
                 :key="item"
                 :label="item"
                 :value="item">
+              <div class="dropdown-option-container">
+                {{item}}
+                <button @click="handleRemoveClick(item)">remove</button>
+              </div>
             </Option>
           </Select>
           <div v-if="player2 !== 'Manual'" class="player-move-history">
@@ -173,6 +181,15 @@ export default {
   },
 
   methods: {
+    handleRemoveClick(item){
+      const index = this.endpointsMemory.indexOf(item);
+      if (index > -1) {
+        this.endpointsMemory.splice(index, 1);
+      }
+      localStorage.setItem("endpoints-memory", JSON.stringify(this.endpointsMemory));
+      if (this.player1 === item)  this.player1 = "";
+      if (this.player2 === item)  this.player2 = "";
+    },
     handleManualMoveClick(move){
       this.executeMove(move);
       this.checkGameStatus();
@@ -283,10 +300,10 @@ export default {
       return false;
     },
     updateEndpointsMemory(){
-      if (!this.endpointsMemory.includes(this.player1)){
+      if (!this.endpointsMemory.includes(this.player1) && this.player1.trim() !== ""){
           this.endpointsMemory.push(this.player1);
       }
-      if (!this.endpointsMemory.includes(this.player2)){
+      if (!this.endpointsMemory.includes(this.player2) && this.player2.trim() !== ""){
         this.endpointsMemory.push(this.player2);
       }
       localStorage.setItem("endpoints-memory", JSON.stringify(this.endpointsMemory));
@@ -361,8 +378,11 @@ export default {
       }
       return data;
     },
-    currentMoves(){
-      return this.chess.moves();
+    currentMoves: {
+      cache: false,
+      get() {
+        return this.chess.moves();
+      },
     },
   },
   mounted() {
@@ -478,5 +498,15 @@ button {
 .switch:hover {
   cursor: pointer;
   opacity: 0.7;
+}
+
+.dropdown-option-container{
+  display: flex;
+  justify-content: space-between;
+}
+
+button:hover{
+  opacity: 0.7;
+  cursor: pointer;
 }
 </style>
