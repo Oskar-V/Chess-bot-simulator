@@ -58,14 +58,25 @@
                 :value="item">
             </Option>
           </Select>
-          <div class="player-move-history">
+          <div v-if="player1 !== 'Manual'" class="player-move-history">
             <div v-for="(move, index) in player1History" :key="index">{{ move }}</div>
           </div>
+          <div v-else-if="player1 === 'Manual' && currentPlayer === 'w' && isPlaying" class="player-available-moves">
+              <button v-for="(move, index) in currentMoves" :key="index" class="move-button" @click="handleManualMoveClick(move)">
+                {{ move }}
+              </button>
+          </div>
+          <div v-else class="player-move-history"></div>
         </div>
+
+
+
         <div class="switch-container">
           <div>switch</div>
           <img @click="handleSwitchClick" src="../assets/exchange-alt-solid.svg" class="switch"/>
         </div>
+
+
         <div>
           <div>Player 2 (black) ({{ player2History.length }})</div>
           <Select
@@ -82,9 +93,15 @@
                 :value="item">
             </Option>
           </Select>
-          <div class="player-move-history">
+          <div v-if="player2 !== 'Manual'" class="player-move-history">
             <div v-for="(move, index) in player2History" :key="index">{{ move }}</div>
           </div>
+          <div v-else-if="player2 === 'Manual' && currentPlayer === 'b' && isPlaying" class="player-available-moves">
+            <button v-for="(move, index) in currentMoves" :key="index" class="move-button" @click="handleManualMoveClick(move)">
+              {{ move }}
+            </button>
+          </div>
+          <div v-else class="player-move-history"></div>
         </div>
       </div>
 
@@ -156,12 +173,49 @@ export default {
   },
 
   methods: {
+    handleManualMoveClick(move){
+      this.executeMove(move);
+      this.checkGameStatus();
+    },
+    executeMove(move){
+      this.chess.move(move);
+      if (this.currentPlayer === "w") {
+        this.currentPlayer = "b";
+        this.allHistory.push(move);
+      } else if (this.currentPlayer === "b") {
+        this.currentPlayer = "w";
+        this.allHistory.push(move);
+      }
+    },
+    checkGameStatus(){
+      const moveLimitExceeded = Number(this.moveLimitPerPlayer) <= this.allHistory.length / 2;
+      if (this.chess.game_over() || moveLimitExceeded) {
+        this.gameCounter++;
+        if (this.chess.in_draw() || this.chess.in_stalemate() || moveLimitExceeded) {
+          this.scores[this.player1]["ties"] += 0.5;
+          this.scores[this.player2]["ties"] += 0.5;
+        } else {
+          if (this.currentPlayer === "w") this.scores[this.player2]["wins"]++;
+          if (this.currentPlayer !== "w") this.scores[this.player1]["wins"]++;
+        }
+        this.scores = JSON.parse(JSON.stringify(this.scores));
+        this.isPlaying = false;
+        this.isEndOfSimulations = true;
+        if (Number(this.gameCounter) < Number(this.gamesToBePlayed)) {
+          this.handleRestartClick(false);
+          if (this.autoSwitchOnGames)this.handleSwitchClick();
+          this.handlePlayClick();
+        }
+      } else {
+        this.moveTriggerer = !this.moveTriggerer;
+      }
+    },
     handleSwitchClick() {
       const helper = this.player2;
       this.player2 = this.player1;
       this.player1 = helper;
     },
-    makeTurn() {
+    makeAutomaticTurn() {
       const endpoint = this.currentPlayer === "w" ? this.player1 : this.player2;
 
       axios.post(endpoint, this.allHistory.join(" "),
@@ -173,38 +227,8 @@ export default {
       )
           .then(response => {
             if (this.isStart && !this.isPlaying && !this.isEndOfSimulations) return;
-
-            this.chess.move(response.data);
-
-            if (this.currentPlayer === "w") {
-              this.currentPlayer = "b";
-              this.allHistory.push(response.data);
-            } else if (this.currentPlayer === "b") {
-              this.currentPlayer = "w";
-              this.allHistory.push(response.data);
-            }
-
-            const moveLimitExceeded = Number(this.moveLimitPerPlayer) <= this.allHistory.length / 2;
-            if (this.chess.game_over() || moveLimitExceeded) {
-              this.gameCounter++;
-              if (this.chess.in_draw() || this.chess.in_stalemate() || moveLimitExceeded) {
-                this.scores[this.player1]["ties"] += 0.5;
-                this.scores[this.player2]["ties"] += 0.5;
-              } else {
-                if (this.currentPlayer === "w") this.scores[this.player2]["wins"]++;
-                if (this.currentPlayer !== "w") this.scores[this.player1]["wins"]++;
-              }
-              this.scores = JSON.parse(JSON.stringify(this.scores));
-              this.isPlaying = false;
-              this.isEndOfSimulations = true;
-              if (Number(this.gameCounter) < Number(this.gamesToBePlayed)) {
-                this.handleRestartClick(false);
-                if (this.autoSwitchOnGames)this.handleSwitchClick();
-                this.handlePlayClick();
-              }
-            } else {
-              this.moveTriggerer = !this.moveTriggerer;
-            }
+            this.executeMove(response.data);
+            this.checkGameStatus();
           }).catch(
           error => console.log(error)
       )
@@ -218,7 +242,7 @@ export default {
         this.scores[this.player1] = {wins: 0, ties: 0};
         this.scores[this.player2] = {wins: 0, ties: 0};
       }
-      this.makeTurn();
+      this.moveTriggerer = !this.moveTriggerer;
     },
     handlePauseClick() {
       this.isPlaying = false;
@@ -226,8 +250,8 @@ export default {
     },
     handleResumeClick() {
       this.isPlaying = true;
-      this.makeTurn();
       this.isEndOfSimulations = false;
+      this.moveTriggerer = !this.moveTriggerer;
     },
     handleRestartClick(hardReset) {
       this.isPlaying = false;
@@ -284,15 +308,16 @@ export default {
   watch: {
     moveTriggerer() {
       if (this.isPlaying) {
-        setTimeout(() => {
-          if (this.isPlaying) this.makeTurn();
-        }, Number(this.delayInMs))
+        if (!(this.currentPlayer === 'w' && this.player1 === 'Manual' || this.currentPlayer === 'b' && this.player2 === 'Manual')){
+          setTimeout(() => {
+            if (this.isPlaying) this.makeAutomaticTurn();
+          }, Number(this.delayInMs))
+        }
       }
     }
   },
 
   computed: {
-
     player1History() {
       const moves = [];
       for (let i = 0; i < this.allHistory.length; i++) {
@@ -336,10 +361,15 @@ export default {
       }
       return data;
     },
+    currentMoves(){
+      return this.chess.moves();
+    },
   },
   mounted() {
     if (localStorage.getItem("endpoints-memory"))
-      this.endpointsMemory = JSON.parse(localStorage.getItem("endpoints-memory"))
+      this.endpointsMemory = JSON.parse(localStorage.getItem("endpoints-memory"));
+    if (!this.endpointsMemory.includes("Manual"))
+      this.endpointsMemory.push("Manual");
   }
 }
 </script>
@@ -359,9 +389,27 @@ button {
   flex-direction: column;
   align-items: center;
   height: 14em;
+  width: 14em;
   max-height: 14em;
   overflow-y: scroll;
 }
+
+.player-available-moves{
+  border: solid 1px black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  height: 14em;
+  width: 14em;
+  max-height: 14em;
+  overflow-y: scroll;
+}
+
+.move-button:hover{
+  opacity: 0.7;
+  cursor: pointer;
+}
+
 
 .player-containers {
   display: flex;
