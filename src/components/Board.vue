@@ -44,7 +44,7 @@
 
       <div class="player-containers">
         <div>
-          <div>Player 1 (white) ({{ player1History.length }})</div>
+          <div>Player 1 (white) ({{ player1History.length }})({{ player1PieceNumber }})</div>
           <Select
               v-model="player1"
               allow-create
@@ -76,7 +76,7 @@
 
 
         <div>
-          <div>Player 2 (black) ({{ player2History.length }})</div>
+          <div>Player 2 (black) ({{ player2History.length }})({{ player2PieceNumber }})</div>
           <Select
               v-model="player2"
               allow-create
@@ -370,6 +370,34 @@ export default {
         }
       }
       return moves;
+    },
+    player1PieceNumber: {
+      cache: false,
+      get() {
+        let c = 0;
+        this.chess.board().forEach(row => {
+          row.forEach(sq => {
+            if (sq && sq.color === 'w'){
+              c++;
+            }
+          })
+        })
+        return c;
+      },
+    },
+    player2PieceNumber: {
+      cache: false,
+      get() {
+        let c = 0;
+        this.chess.board().forEach(row => {
+          row.forEach(sq => {
+            if (sq && sq.color === 'b'){
+              c++;
+            }
+          })
+        })
+        return c;
+      },
     },
     gameSquares: {
       cache: false,
